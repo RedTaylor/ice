@@ -16,7 +16,7 @@ exception UserError
 
 interface MyInterface
 {
-    void op(bool throwIt) throws UserError;
+    void op(bool throwIt);
 }
 
 }

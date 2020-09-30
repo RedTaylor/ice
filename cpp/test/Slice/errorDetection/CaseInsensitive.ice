@@ -229,16 +229,16 @@ struct s2
 interface Foo
 {
     void op(long param, string Param);
-    void op2() throws e1;
-    void op3() throws E1;
-    void op4() throws Test::xxx::xx::e1;
-    void op5() throws Test::xxx::xx::E1;
-    void op6() throws Test::xxx::XX::e1;
-    void op7() throws Test::XXX::xx::e1;
-    void op8() throws ::Test::xxx::xx::e1;
-    void op9() throws ::Test::xxx::xx::E1;
-    void op10() throws ::Test::xxx::XX::e1;
-    void op11() throws ::Test::XXX::xx::e1;
+    void op2();
+    void op3();
+    void op4();
+    void op5();
+    void op6();
+    void op7();
+    void op8();
+    void op9();
+    void op10();
+    void op11();
     void op12(long op12);
     void op13(long OP13);
 }

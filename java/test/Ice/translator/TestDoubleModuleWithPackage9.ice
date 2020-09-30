@@ -51,8 +51,7 @@ class dmwpTest9Class : dmwpBaseClass implements dmwpBaseInterface
                  out dmwpStructSeq o3,
                  out dmwpStringStructDict o4,
                  out dmwpInterface o5,
-                 out dmwpClass o6)
-        throws dmwpException;
+                 out dmwpClass o6);
 
     [amd]
     dmwpStruct
@@ -67,8 +66,7 @@ class dmwpTest9Class : dmwpBaseClass implements dmwpBaseInterface
                  out dmwpStructSeq o3,
                  out dmwpStringStructDict o4,
                  out dmwpInterface o5,
-                 out dmwpClass o6)
-        throws dmwpException;
+                 out dmwpClass o6);
 }
 
 }

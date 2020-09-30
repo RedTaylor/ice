@@ -44,8 +44,7 @@ module IceStormElection
         ///
         /// @throws ObserverInconsistencyException Raised if an
         /// inconsisency was detected.
-        void init(LogUpdate llu, TopicContentSeq content)
-            throws ObserverInconsistencyException;
+        void init(LogUpdate llu, TopicContentSeq content);
 
         /// Create the topic with the given name.
         ///
@@ -55,8 +54,7 @@ module IceStormElection
         ///
         /// @throws ObserverInconsistencyException Raised if an
         /// inconsisency was detected.
-        void createTopic(LogUpdate llu, string name)
-            throws ObserverInconsistencyException;
+        void createTopic(LogUpdate llu, string name);
 
         /// Destroy the topic with the given name.
         ///
@@ -66,8 +64,7 @@ module IceStormElection
         ///
         /// @throws ObserverInconsistencyException Raised if an
         /// inconsisency was detected.
-        void destroyTopic(LogUpdate llu, string name)
-            throws ObserverInconsistencyException;
+        void destroyTopic(LogUpdate llu, string name);
 
         /// Add a subscriber to a topic.
         ///
@@ -79,8 +76,7 @@ module IceStormElection
         ///
         /// @throws ObserverInconsistencyException Raised if an
         /// inconsisency was detected.
-        void addSubscriber(LogUpdate llu, string topic, IceStorm::SubscriberRecord record)
-            throws ObserverInconsistencyException;
+        void addSubscriber(LogUpdate llu, string topic, IceStorm::SubscriberRecord record);
 
         /// Remove a subscriber from a topic.
         ///
@@ -92,8 +88,7 @@ module IceStormElection
         ///
         /// @throws ObserverInconsistencyException Raised if an
         /// inconsisency was detected.
-        void removeSubscriber(LogUpdate llu, string topic, Ice::IdentitySeq subscribers)
-            throws ObserverInconsistencyException;
+        void removeSubscriber(LogUpdate llu, string topic, Ice::IdentitySeq subscribers);
     }
 
     /// Interface used to sync topics.

@@ -28,11 +28,11 @@ exception TestImpossibleException
 
     void unknownExceptionWithServantException();
 
-    string impossibleException(bool throw) throws TestImpossibleException;
-    string intfUserException(bool throw) throws TestIntfUserException, TestImpossibleException;
+    string impossibleException(bool throw);
+    string intfUserException(bool throw);
 
-    void asyncResponse() throws TestIntfUserException, TestImpossibleException;
-    void asyncException() throws TestIntfUserException, TestImpossibleException;
+    void asyncResponse();
+    void asyncException();
 
     void shutdown();
 }

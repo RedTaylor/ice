@@ -19,8 +19,7 @@ interface CallbackReceiver
 {
     void callback();
 
-    void callbackEx()
-        throws CallbackException;
+    void callbackEx();
 
     [amd] int concurrentCallback(int number);
 
@@ -34,7 +33,7 @@ interface Callback
     [amd] void initiateCallback(CallbackReceiver* proxy);
 
     [amd] void initiateCallbackEx(CallbackReceiver* proxy)
-        throws CallbackException;
+        ;
 
     [amd] int initiateConcurrentCallback(int number, CallbackReceiver* proxy);
 

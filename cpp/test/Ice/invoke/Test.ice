@@ -17,7 +17,7 @@ interface MyClass
 
     string opString(string s1, out string s2);
 
-    void opException() throws MyException;
+    void opException();
 
     void shutdown();
 }

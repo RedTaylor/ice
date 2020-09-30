@@ -65,7 +65,7 @@ module IceStorm
         /// @param id The sequence of identities.
         ///
         /// @throws ReapWouldBlock Raised if the reap call would block.
-        void reap(Ice::IdentitySeq id) throws ReapWouldBlock;
+        void reap(Ice::IdentitySeq id);
     }
 
     /// Internal operations for a topic manager.

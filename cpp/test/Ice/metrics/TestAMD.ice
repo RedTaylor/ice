@@ -19,8 +19,7 @@ interface Metrics
 
     [amd] idempotent void fail();
 
-    [amd] void opWithUserException()
-        throws UserEx;
+    [amd] void opWithUserException();
 
     [amd] void opWithRequestFailedException();
 

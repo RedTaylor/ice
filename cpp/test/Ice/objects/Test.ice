@@ -223,7 +223,7 @@ interface Initial
     ClassMap opClassMap(ClassMap v1, out ClassMap v2);
 
     D1 getD1(D1 d1);
-    void throwEDerived() throws EDerived;
+    void throwEDerived();
 
     void setG(G theG);
 
@@ -234,8 +234,8 @@ interface Initial
     Inner::A getInnerA();
     Inner::Sub::A getInnerSubA();
 
-    void throwInnerEx() throws Inner::Ex;
-    void throwInnerSubEx() throws Inner::Sub::Ex;
+    void throwInnerEx();
+    void throwInnerSubEx();
 
     M opM(M v1, out M v2);
 
@@ -248,7 +248,7 @@ interface Initial
 interface TestIntf
 {
     Base opDerived();
-    void throwDerived() throws BaseEx;
+    void throwDerived();
 }
 
 class Empty

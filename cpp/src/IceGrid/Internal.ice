@@ -142,8 +142,7 @@ module IceGrid
         ///
         /// @return A direct proxy containing the last known adapter
         /// endpoints if the adapter is already active.
-        [nonmutating] [cpp:const] idempotent Object* getDirectProxy()
-            throws AdapterNotActiveException;
+        [nonmutating] [cpp:const] idempotent Object* getDirectProxy();
 
         /// Set the direct proxy for this adapter.
         ///
@@ -154,8 +153,7 @@ module IceGrid
         /// @throws AdapterActiveException The adapter is already
         /// active. It's not possible to override the direct proxy of an
         /// active adapter.
-        void setDirectProxy(Object* proxy)
-            throws AdapterActiveException;
+        void setDirectProxy(Object* proxy);
     }
 
     /// This exception is raised if an adapter with the same name already
@@ -171,33 +169,28 @@ module IceGrid
     {
         /// Count the number of given lines from the end of the file and
         /// return the file offset.
-        [cpp:const] idempotent long getOffsetFromEnd(string filename, int lines)
-            throws FileNotAvailableException;
+        [cpp:const] idempotent long getOffsetFromEnd(string filename, int lines);
 
         /// Read lines (or size bytes) at the specified position from the given file.
-        [cpp:const] idempotent bool read(string filename, long pos, int size, out long newPos, out Ice::StringSeq lines)
-            throws FileNotAvailableException;
+        [cpp:const] idempotent bool read(string filename, long pos, int size, out long newPos, out Ice::StringSeq lines);
     }
 
     interface Server : FileReader
     {
         /// Start the server.
-        [amd] void start()
-            throws ServerStartException;
+        [amd] void start();
 
         /// Stop the server. This methods returns only when the server is
         /// deactivated. If the server doesn't stop after a configurable
         /// amount of time, it will be killed.
-        [amd] void stop()
-            throws ServerStopException;
+        [amd] void stop();
 
         /// Check if the given server can be loaded on this node.
         ///
         /// @return True if the server is inactive.
         ///
         /// @throws DeploymentException Raised if the server can't be updated.
-        bool checkUpdate(InternalServerDescriptor svr, bool noRestart)
-            throws DeploymentException;
+        bool checkUpdate(InternalServerDescriptor svr, bool noRestart);
 
         /// Enable or disable the server.
         void setEnabled(bool enable);
@@ -206,8 +199,7 @@ module IceGrid
         [nonmutating] [cpp:const] idempotent bool isEnabled();
 
         /// Send signal to the server
-        void sendSignal(string signal)
-            throws BadSignalException;
+        void sendSignal(string signal);
 
         /// Write message on servers' stdout or stderr.
         void writeMessage(string message, int fd);
@@ -255,8 +247,7 @@ module IceGrid
                                                     string replicaName,
                                                     out AdapterPrxDict adapters,
                                                     out int actTimeout,
-                                                    out int deactTimeout)
-            throws DeploymentException;
+                                                    out int deactTimeout);
 
         /// Load the given server and ensure the server won't be
         /// restarted. If the server resources weren't already created
@@ -267,16 +258,13 @@ module IceGrid
                                                             string replicaName,
                                                             out AdapterPrxDict adapters,
                                                             out int actTimeout,
-                                                            out int deactTimeout)
-            throws DeploymentException;
+                                                            out int deactTimeout);
 
         /// Destroy the given server.
-        [amd] idempotent void destroyServer(string name, string uuid, int revision, string replicaName)
-            throws DeploymentException;
+        [amd] idempotent void destroyServer(string name, string uuid, int revision, string replicaName);
 
         /// Destroy the server if it's not active.
-        [amd] idempotent void destroyServerWithoutRestart(string name, string uuid, int revision, string replicaName)
-            throws DeploymentException;
+        [amd] idempotent void destroyServerWithoutRestart(string name, string uuid, int revision, string replicaName);
 
         /// Establish a session to the given replica, this method only
         /// returns once the registration was attempted (unlike
@@ -372,8 +360,7 @@ module IceGrid
 
         /// Set the database observer. Once the observer is subscribed, it
         /// will receive the database and database updates.
-        idempotent void setDatabaseObserver(DatabaseObserver* dbObs, tag(1) StringLongDict? serials)
-            throws ObserverAlreadyRegisteredException, DeploymentException;
+        idempotent void setDatabaseObserver(DatabaseObserver* dbObs, tag(1) StringLongDict? serials);
 
         /// This method sets the endpoints of the replica. This allows the
         /// master to create proxies with multiple endpoints for replicated
@@ -386,8 +373,7 @@ module IceGrid
         /// Set the adapter direct proxy of the given adapter in the
         /// master. This is used to support dynamic registration with
         /// the locator registry interface.
-        idempotent void setAdapterDirectProxy(string adapterId, string replicaGroupId, Object* proxy)
-            throws AdapterNotExistException, AdapterExistsException;
+        idempotent void setAdapterDirectProxy(string adapterId, string replicaGroupId, Object* proxy);
 
         /// Notify the master that an update was received. The master might
         /// wait for replication updates to be received by all the replicas
@@ -455,8 +441,7 @@ module IceGrid
         ///
         /// @throws NodeActiveException Raised if the node is already
         /// registered and currently active.
-        NodeSession* registerNode(InternalNodeInfo info, Node* prx, LoadInfo loadInf)
-            throws NodeActiveException, PermissionDeniedException;
+        NodeSession* registerNode(InternalNodeInfo info, Node* prx, LoadInfo loadInf);
 
         /// Register a replica with the registry. If a replica with the
         /// same name is already registered, [registerReplica] will overide
@@ -470,8 +455,7 @@ module IceGrid
         ///
         /// @throws ReplicaActiveException Raised if the replica is already
         /// registered and currently active.
-        ReplicaSession* registerReplica(InternalReplicaInfo info, InternalRegistry* prx)
-            throws ReplicaActiveException, PermissionDeniedException;
+        ReplicaSession* registerReplica(InternalReplicaInfo info, InternalRegistry* prx);
 
         /// Create a session with the given registry replica. This method
         /// returns only once the session creation has been attempted.

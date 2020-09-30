@@ -29,7 +29,7 @@ interface MyObject
     //
     // Raise user exception
     //
-    int badAdd(int x, int y) throws InvalidInputException;
+    int badAdd(int x, int y);
 
     //
     // Raise ONE
@@ -58,7 +58,7 @@ interface MyObject
     //
     // Raise user exception
     //
-    [amd] int amdBadAdd(int x, int y) throws InvalidInputException;
+    [amd] int amdBadAdd(int x, int y);
 
     //
     // Raise ONE

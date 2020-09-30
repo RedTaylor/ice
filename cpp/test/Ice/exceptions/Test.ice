@@ -60,15 +60,15 @@ interface Thrower
     bool supportsUndeclaredExceptions();
     bool supportsAssertException();
 
-    void throwAasA(int a) throws A;
-    void throwAorDasAorD(int a) throws A, D;
-    void throwBasA(int a, int b) throws A;
-    void throwCasA(int a, int b, int c) throws A;
-    void throwBasB(int a, int b) throws B;
-    void throwCasB(int a, int b, int c) throws B;
-    void throwCasC(int a, int b, int c) throws C;
+    void throwAasA(int a);
+    void throwAorDasAorD(int a);
+    void throwBasA(int a, int b);
+    void throwCasA(int a, int b, int c);
+    void throwBasB(int a, int b);
+    void throwCasB(int a, int b, int c);
+    void throwCasC(int a, int b, int c);
 
-    void throwModA(int a, int a2) throws Mod::A;
+    void throwModA(int a, int a2);
 
     void throwUndeclaredA(int a);
     void throwUndeclaredB(int a, int b);
@@ -81,7 +81,7 @@ interface Thrower
     idempotent void throwLocalExceptionIdempotent();
 
     void throwAfterResponse();
-    void throwAfterException() throws A;
+    void throwAfterException();
 }
 
 interface WrongOperation

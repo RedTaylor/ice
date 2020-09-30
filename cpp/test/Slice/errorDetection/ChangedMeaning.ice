@@ -127,21 +127,21 @@ struct y
 
 interface Blah
 {
-    void op1() throws ::Test::E::ee1;   // Nothing introduced
+    void op1();   // Nothing introduced
     void E();                           // OK
-    void op2() throws E;                // Changed meaning
+    void op2();                // Changed meaning
 }
 
 interface Blah2
 {
-    void op3() throws ::Test::E::ee1;   // Nothing introduced
+    void op3();   // Nothing introduced
     void E();                           // OK
-    void op4() throws E::ee1;           // Changed meaning
+    void op4();           // Changed meaning
 }
 
 interface Blah3
 {
-    void op5() throws E::ee1;           // Introduces E
+    void op5();           // Introduces E
     void E();                           // Changed meaning
 }
 
@@ -171,7 +171,7 @@ const ::Test::M1::M2::C MyConstant4 = ::Test::M1::M2::C2; // OK
 
 interface smnpTest1Class
 {
-    M1::smnpStruct smnpTest1Op1() throws M1::smnpException; // OK
+    M1::smnpStruct smnpTest1Op1(); // OK
 }
 
 class Foo

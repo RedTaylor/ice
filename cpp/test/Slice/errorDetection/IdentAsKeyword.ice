@@ -39,8 +39,8 @@ sequence<long> short;
 sequence<module> seq1;
 sequence<moDule> seq2;
 
-dictionary<long, long> throws;
-dictionary<long, long> thRows;
+dictionary<long, long>;
+dictionary<long, long>;
 dictionary<long, long> LOCALobject;
 
 dictionary<module, long> d1;

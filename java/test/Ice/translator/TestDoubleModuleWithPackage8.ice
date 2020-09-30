@@ -51,9 +51,7 @@ class dmwpTest8Class : ::M1::M2::dmwpBaseClass implements ::M1::M2::dmwpBaseInte
                  out ::M1::M2::dmwpStructSeq o3,
                  out ::M1::M2::dmwpStringStructDict o4,
                  out ::M1::M2::dmwpInterface o5,
-                 out ::M1::M2::dmwpClass o6)
-        throws ::M1::M2::dmwpException;
-
+                 out ::M1::M2::dmwpClass o6);
     [amd]
     ::M1::M2::dmwpStruct
     dmwpTest8Op3(::M1::M2::dmwpEnum i1,
@@ -67,8 +65,7 @@ class dmwpTest8Class : ::M1::M2::dmwpBaseClass implements ::M1::M2::dmwpBaseInte
                  out ::M1::M2::dmwpStructSeq o3,
                  out ::M1::M2::dmwpStringStructDict o4,
                  out ::M1::M2::dmwpInterface o5,
-                 out ::M1::M2::dmwpClass o6)
-        throws ::M1::M2::dmwpException;
+                 out ::M1::M2::dmwpClass o6);
 }
 
 }

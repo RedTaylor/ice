@@ -51,8 +51,7 @@ class dmnpTest5Class : ::M1::M2::dmnpBaseClass implements ::M1::M2::dmnpBaseInte
                  out ::M1::M2::dmnpStructSeq o3,
                  out ::M1::M2::dmnpStringStructDict o4,
                  out ::M1::M2::dmnpInterface o5,
-                 out ::M1::M2::dmnpClass o6)
-        throws ::M1::M2::dmnpException;
+                 out ::M1::M2::dmnpClass o6);
 
     [amd]
     ::M1::M2::dmnpStruct
@@ -67,8 +66,7 @@ class dmnpTest5Class : ::M1::M2::dmnpBaseClass implements ::M1::M2::dmnpBaseInte
                  out ::M1::M2::dmnpStructSeq o3,
                  out ::M1::M2::dmnpStringStructDict o4,
                  out ::M1::M2::dmnpInterface o5,
-                 out ::M1::M2::dmnpClass o6)
-        throws ::M1::M2::dmnpException;
+                 out ::M1::M2::dmnpClass o6);
 }
 
 }

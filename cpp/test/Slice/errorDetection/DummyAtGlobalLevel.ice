@@ -4,8 +4,8 @@
 
 interface Foo
 {
-    void op() throws UndefinedException;
-    void op2() throws class;
+    void op();
+    void op2();
 }
 
 sequence<int> IntSeq;

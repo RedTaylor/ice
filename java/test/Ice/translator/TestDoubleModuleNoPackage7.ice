@@ -53,8 +53,7 @@ class dmnpTest7Class : dmnpBaseClass implements dmnpBaseInterface
                  out dmnpStructSeq o3,
                  out dmnpStringStructDict o4,
                  out dmnpInterface o5,
-                 out dmnpClass o6)
-        throws dmnpException;
+                 out dmnpClass o6);
 
     [amd]
     dmnpStruct
@@ -69,8 +68,7 @@ class dmnpTest7Class : dmnpBaseClass implements dmnpBaseInterface
                  out dmnpStructSeq o3,
                  out dmnpStringStructDict o4,
                  out dmnpInterface o5,
-                 out dmnpClass o6)
-        throws dmnpException;
+                 out dmnpClass o6);
 }
 
 }

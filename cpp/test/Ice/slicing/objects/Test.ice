@@ -146,11 +146,11 @@ interface TestIntf
 
     PNode exchangePNode(PNode pn);
 
-    void throwBaseAsBase() throws BaseException;
-    void throwDerivedAsBase() throws BaseException;
-    void throwDerivedAsDerived() throws DerivedException;
-    void throwUnknownDerivedAsBase() throws BaseException;
-    [amd] void throwPreservedException() throws PreservedException;
+    void throwBaseAsBase();
+    void throwDerivedAsBase();
+    void throwDerivedAsDerived();
+    void throwUnknownDerivedAsBase();
+    [amd] void throwPreservedException();
 
     void useForward(out Forward f); /* Use of forward-declared class to verify that code is generated correctly. */
 

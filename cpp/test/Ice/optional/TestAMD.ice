@@ -162,14 +162,11 @@ interface Initial
 
     Object pingPong(Object o);
 
-    void opOptionalException(optional(1) int a, optional(2) string b, optional(3) VarStruct vs)
-        throws OptionalException;
+    void opOptionalException(optional(1) int a, optional(2) string b, optional(3) VarStruct vs);
 
-    void opDerivedException(optional(1) int a, optional(2) string b, optional(3) VarStruct vs)
-        throws OptionalException;
+    void opDerivedException(optional(1) int a, optional(2) string b, optional(3) VarStruct vs);
 
-    void opRequiredException(optional(1) int a, optional(2) string b, optional(3) VarStruct vs)
-        throws OptionalException;
+    void opRequiredException(optional(1) int a, optional(2) string b, optional(3) VarStruct vs);
 
     optional(1) byte opByte(optional(2) byte p1, out optional(3) byte p3);
 

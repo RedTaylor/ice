@@ -31,10 +31,8 @@ interface TestIntf
     void op();
     void opWithPayload(Ice::ByteSeq seq);
     int opWithResult();
-    void opWithUE()
-        throws TestIntfException;
-    int opWithResultAndUE()
-        throws TestIntfException;
+    void opWithUE();
+    int opWithResultAndUE();
     void opBatch();
 
     void opWithArgs(out int one, out int two, out int three, out int four, out int five, out int six, out int seven,

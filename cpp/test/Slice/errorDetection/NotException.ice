@@ -11,10 +11,10 @@ dictionary<string, string> D;
 
 interface Bar
 {
-    void foo1() throws C;
-    void foo2() throws S;
-    void foo3() throws D;
-    void foo4() throws int;
+    void foo1();
+    void foo2();
+    void foo3();
+    void foo4();
     void op();
 }
 

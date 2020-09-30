@@ -27,8 +27,7 @@ exception WstringException
 
     WstringStruct opStruct(WstringStruct s1, out WstringStruct s2);
 
-    void throwExcept(string reason)
-        throws WstringException;
+    void throwExcept(string reason);
 }
 
 }
@@ -56,8 +55,7 @@ dictionary<[cpp:type:wstring] string, [cpp:type:wstring] string> WstringWStringD
 
     WstringStruct opStruct(WstringStruct s1, out WstringStruct s2);
 
-    void throwExcept(string reason)
-        throws WstringException;
+    void throwExcept(string reason);
 }
 
 }
