@@ -149,56 +149,10 @@ namespace ZeroC.Ice
         internal static ReadOnlySpan<T> AsReadOnlySpan<T>(this ArraySegment<T> segment, int start, int length) =>
             segment.AsSpan(start, length);
 
-        internal static (int Size, int SizeLength, Encoding Encoding) ReadEncapsulationHeader(
-            this ReadOnlySpan<byte> buffer,
-            Encoding encoding)
-        {
-            int sizeLength;
-            int size;
-
-            if (encoding == Encoding.V11)
-            {
-                sizeLength = 4;
-                size = buffer.ReadInt() - sizeLength; // Remove the size length which is included with the 1.1 encoding.
-                if (size < 0)
-                {
-                    throw new InvalidDataException(
-                        $"the 1.1 encapsulation's size ({size + sizeLength}) is too small");
-                }
-            }
-            else
-            {
-                (size, sizeLength) = buffer.ReadSize20();
-            }
-
-            if (sizeLength + size > buffer.Length)
-            {
-                throw new InvalidDataException(
-                    $"the encapsulation's size ({size}) extends beyond the end of the buffer");
-            }
-
-            return (size, sizeLength, new Encoding(buffer[sizeLength], buffer[sizeLength + 1]));
-        }
-
-        internal static int ReadFixedLengthSize(this ReadOnlySpan<byte> buffer, Encoding encoding)
-        {
-            if (encoding == Encoding.V11)
-            {
-                return buffer.ReadInt();
-            }
-            else
-            {
-                return buffer.ReadSize20().Size;
-            }
-        }
-
         internal static int ReadInt(this ReadOnlySpan<byte> buffer) => BitConverter.ToInt32(buffer);
         internal static long ReadLong(this ReadOnlySpan<byte> buffer) => BitConverter.ToInt64(buffer);
         internal static short ReadShort(this ReadOnlySpan<byte> buffer) => BitConverter.ToInt16(buffer);
         internal static ushort ReadUShort(this ReadOnlySpan<byte> buffer) => BitConverter.ToUInt16(buffer);
-
-        internal static (int Size, int SizeLength) ReadSize(this ReadOnlySpan<byte> buffer, Encoding encoding) =>
-            encoding == Encoding.V11 ? buffer.ReadSize11() : buffer.ReadSize20();
 
         /// <summary>Reads a string from a UTF-8 byte buffer. The size of the byte buffer corresponds to the number of
         /// UTF-8 code points in the string.</summary>
@@ -206,22 +160,6 @@ namespace ZeroC.Ice
         /// <returns>The string read from the buffer.</returns>
         internal static string ReadString(this ReadOnlySpan<byte> buffer) =>
             buffer.IsEmpty ? "" : _utf8.GetString(buffer);
-
-        private static (int Size, int SizeLength) ReadSize11(this ReadOnlySpan<byte> buffer)
-        {
-            byte b = buffer[0];
-            if (b < 255)
-            {
-                return (b, 1);
-            }
-
-            int size = buffer.Slice(1, 4).ReadInt();
-            if (size < 0)
-            {
-                throw new InvalidDataException($"read invalid size: {size}");
-            }
-            return (size, 5);
-        }
 
         internal static (int Size, int SizeLength) ReadSize20(this ReadOnlySpan<byte> buffer)
         {
@@ -241,19 +179,7 @@ namespace ZeroC.Ice
 
         internal static int ReadSizeLength20(this byte b) => b.ReadVarLongLength();
 
-        internal static (long Value, int ValueLength) ReadVarLong(this ReadOnlySpan<byte> buffer)
-        {
-            long value = (buffer[0] & 0x03) switch
-            {
-                0 => buffer[0] >> 2,
-                1 => BitConverter.ToInt16(buffer) >> 2,
-                2 => BitConverter.ToInt32(buffer) >> 2,
-                _ => BitConverter.ToInt64(buffer) >> 2
-            };
-
-            return (value, buffer[0].ReadVarLongLength());
-        }
-
+        // Applies to all var type: varlong, varulong etc.
         internal static int ReadVarLongLength(this byte b) => 1 << (b & 0x03);
 
         internal static (ulong Value, int ValueLength) ReadVarULong(this ReadOnlySpan<byte> buffer)
@@ -282,55 +208,35 @@ namespace ZeroC.Ice
         }
 
         /// <summary>Writes a size into a span of bytes using a fixed number of bytes.</summary>
-        /// <param name="buffer">The destination byte buffer, which must be 1, 2 or 4 bytes long.</param>
+        /// <param name="buffer">The destination byte buffer, which must be 1, 2, 4 or 8 bytes long.</param>
         /// <param name="size">The size to write.</param>
-        internal static void WriteFixedLengthSize20(this Span<byte> buffer, int size)
+        internal static void WriteFixedLengthSize20(this Span<byte> buffer, long size)
         {
             int sizeLength = buffer.Length;
-            Debug.Assert(sizeLength == 1 || sizeLength == 2 || sizeLength == 4);
+            Debug.Assert(sizeLength == 1 || sizeLength == 2 || sizeLength == 4 || sizeLength == 8);
 
-            (uint encodedSize, uint maxSize) = sizeLength switch
+            (uint encodedSizeExponent, long maxSize) = sizeLength switch
             {
-                1 => (0x00u, 63u), // 2^6 - 1
-                2 => (0x01u, 16_383u), // 2^14 - 1
-                _ => (0x02u, 1_073_741_823u) // 2^30 - 1
+                1 => (0x00u, 63), // 2^6 - 1
+                2 => (0x01u, 16_383), // 2^14 - 1
+                4 => (0x02u, 1_073_741_823), // 2^30 - 1
+                _ => (0x03u, (long)EncodingDefinitions.VarULongMaxValue)
             };
 
             if (size < 0 || size > maxSize)
             {
-                throw new ArgumentOutOfRangeException("size is out of range", nameof(size));
+                throw new ArgumentOutOfRangeException(
+                    $"size `{size}' cannot be encoded on {sizeLength} bytes",
+                    nameof(size));
             }
 
-            Span<byte> uintBuf = stackalloc byte[4];
-            uint v = (uint)size;
+            Span<byte> ulongBuf = stackalloc byte[8];
+            ulong v = (ulong)size;
             v <<= 2;
 
-            v |= encodedSize;
-            MemoryMarshal.Write(uintBuf, ref v);
-            uintBuf.Slice(0, sizeLength).CopyTo(buffer);
-        }
-
-        /// <summary>Writes a varlong into a span of bytes using a fixed number of bytes.</summary>
-        /// <param name="buffer">The destination byte buffer, which must be 1, 2, 4 or 8 bytes long.</param>
-        /// <param name="value">The value to write.</param>
-        internal static void WriteFixedLengthVarLong(this Span<byte> buffer, long value)
-        {
-            Debug.Assert(buffer.Length >= OutputStream.GetVarLongLength(value));
-
-            Span<byte> longBuf = stackalloc byte[8];
-            long v = value;
-            v <<= 2;
-            uint encodedSize = buffer.Length switch
-            {
-                1 => 0x00,
-                2 => 0x01,
-                4 => 0x02,
-                _ => 0x03
-            };
-            v |= encodedSize;
-
-            MemoryMarshal.Write(longBuf, ref v);
-            longBuf.Slice(0, buffer.Length).CopyTo(buffer);
+            v |= encodedSizeExponent;
+            MemoryMarshal.Write(ulongBuf, ref v);
+            ulongBuf.Slice(0, sizeLength).CopyTo(buffer);
         }
 
         internal static void WriteInt(this Span<byte> buffer, int v) => MemoryMarshal.Write(buffer, ref v);

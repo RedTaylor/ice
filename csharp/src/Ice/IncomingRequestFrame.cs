@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace ZeroC.Ice
@@ -9,8 +10,12 @@ namespace ZeroC.Ice
     /// <summary>Represents a request protocol frame received by the application.</summary>
     public sealed class IncomingRequestFrame : IncomingFrame, IDisposable
     {
-        /// <summary>The request context. Its initial value is computed when the request frame is created.</summary>
-        public Dictionary<string, string> Context { get; }
+        /// <inheritdoc/>
+        public override IReadOnlyDictionary<int, ReadOnlyMemory<byte>> BinaryContext { get; } =
+            ImmutableDictionary<int, ReadOnlyMemory<byte>>.Empty;
+
+        /// <summary>The request context.</summary>
+        public SortedDictionary<string, string> Context { get; }
 
         /// <summary>The deadline corresponds to the request's expiration time. Once the deadline is reached, the
         /// caller is no longer interested in the response and discards the request. The server-side runtime does not
@@ -19,9 +24,6 @@ namespace ZeroC.Ice
         /// with ice1 requests. As a result, the deadline for an ice1 request is always <see cref="DateTime.MaxValue"/>
         /// on the server-side even though the invocation timeout is usually not infinite.</summary>
         public DateTime Deadline { get; }
-
-        /// <summary>The encoding of the frame payload.</summary>
-        public override Encoding Encoding { get; }
 
         /// <summary>The facet of the target Ice object.</summary>
         public string Facet { get; }
@@ -38,12 +40,15 @@ namespace ZeroC.Ice
         /// <summary>The operation called on the Ice object.</summary>
         public string Operation { get; }
 
+        /// <inheritdoc/>
+        public override Encoding PayloadEncoding { get; }
+
         /// <summary>The priority of this request.</summary>
         public Priority Priority { get; }
 
         // The optional socket stream. The stream is non-null if there's still data to read over the stream
         // after the reading of the request frame.
-        private SocketStream? _socketStream;
+        internal SocketStream? SocketStream { get; set; }
 
         /// <summary>Constructs an incoming request frame.</summary>
         /// <param name="protocol">The Ice protocol.</param>
@@ -55,18 +60,18 @@ namespace ZeroC.Ice
         }
 
         /// <summary>Releases resources used by the request frame.</summary>
-        public void Dispose() => _socketStream?.TryDispose();
+        public void Dispose() => SocketStream?.TryDispose();
 
         /// <summary>Reads the arguments from the request and makes sure this request carries no argument or only
         /// unknown tagged arguments.</summary>
         public void ReadEmptyArgs()
         {
-            if (HasCompressedPayload)
+            if (PayloadCompressionFormat != CompressionFormat.Decompressed)
             {
                 DecompressPayload();
             }
 
-            if (_socketStream != null)
+            if (SocketStream != null)
             {
                 throw new InvalidDataException("stream data available for operation without stream parameter");
             }
@@ -81,12 +86,12 @@ namespace ZeroC.Ice
         /// <returns>The request arguments.</returns>
         public T ReadArgs<T>(Connection connection, InputStreamReader<T> reader)
         {
-            if (HasCompressedPayload)
+            if (PayloadCompressionFormat != CompressionFormat.Decompressed)
             {
                 DecompressPayload();
             }
 
-            if (_socketStream != null)
+            if (SocketStream != null)
             {
                 throw new InvalidDataException("stream data available for operation without stream parameter");
             }
@@ -99,21 +104,21 @@ namespace ZeroC.Ice
         /// <returns>The request argument.</returns>
         public T ReadArgs<T>(Func<SocketStream, T> reader)
         {
-            if (HasCompressedPayload)
+            if (PayloadCompressionFormat != CompressionFormat.Decompressed)
             {
                 DecompressPayload();
             }
 
-            if (_socketStream == null)
+            if (SocketStream == null)
             {
                 throw new InvalidDataException("no stream data available for operation with stream parameter");
             }
 
             Payload.AsReadOnlyMemory().ReadEmptyEncapsulation(Protocol.GetEncoding());
-            T value = reader(_socketStream);
+            T value = reader(SocketStream);
             // Clear the socket stream to ensure it's not disposed with the request frame. It's now the
             // responsibility of the stream parameter object to dispose the socket stream.
-            _socketStream = null;
+            SocketStream = null;
             return value;
         }
 
@@ -124,12 +129,12 @@ namespace ZeroC.Ice
         /// <returns>The request arguments.</returns>
         public T ReadArgs<T>(Connection connection, InputStreamReaderWithStreamable<T> reader)
         {
-            if (HasCompressedPayload)
+            if (PayloadCompressionFormat != CompressionFormat.Decompressed)
             {
                 DecompressPayload();
             }
 
-            if (_socketStream == null)
+            if (SocketStream == null)
             {
                 throw new InvalidDataException("no stream data available for operation with stream parameter");
             }
@@ -138,10 +143,10 @@ namespace ZeroC.Ice
                                        Protocol.GetEncoding(),
                                        connection: connection,
                                        startEncapsulation: true);
-            T value = reader(istr, _socketStream);
+            T value = reader(istr, SocketStream);
             // Clear the socket stream to ensure it's not disposed with the request frame. It's now the
             // responsibility of the stream parameter object to dispose the socket stream.
-            _socketStream = null;
+            SocketStream = null;
             istr.CheckEndOfBuffer(skipTaggedParams: true);
             return value;
         }
@@ -157,26 +162,30 @@ namespace ZeroC.Ice
             ArraySegment<byte> data,
             int maxSize,
             SocketStream? socketStream)
-            : base(data, protocol, maxSize)
+            : base(protocol, maxSize)
         {
-            _socketStream = socketStream;
+            SocketStream = socketStream;
 
-            var istr = new InputStream(Data, Protocol.GetEncoding());
+            var istr = new InputStream(data, Protocol.GetEncoding());
 
             if (Protocol == Protocol.Ice1)
             {
-                var requestHeaderBody = new Ice1RequestHeaderBody(istr);
-                Identity = requestHeaderBody.Identity;
-                Facet = Ice1Definitions.GetFacet(requestHeaderBody.FacetPath);
+                var requestHeader = new Ice1RequestHeader(istr);
+                Identity = requestHeader.Identity;
+                Facet = Ice1Definitions.GetFacet(requestHeader.FacetPath);
                 Location = Array.Empty<string>();
-                Operation = requestHeaderBody.Operation;
-                IsIdempotent = requestHeaderBody.OperationMode != OperationMode.Normal;
-                Context = requestHeaderBody.Context;
+                Operation = requestHeader.Operation;
+                IsIdempotent = requestHeader.OperationMode != OperationMode.Normal;
+                Context = requestHeader.Context;
                 Priority = default;
                 Deadline = DateTime.MaxValue;
             }
             else
             {
+                int headerSize = istr.ReadSize();
+                int startPos = istr.Pos;
+
+                // We use the generated code for the header body and read the rest of the header "by hand".
                 var requestHeaderBody = new Ice2RequestHeaderBody(istr);
                 Identity = requestHeaderBody.Identity;
                 Facet = requestHeaderBody.Facet ?? "";
@@ -191,11 +200,20 @@ namespace ZeroC.Ice
                 // The infinite deadline is encoded as -1 and converted to DateTime.MaxValue
                 Deadline = requestHeaderBody.Deadline == -1 ?
                     DateTime.MaxValue : DateTime.UnixEpoch + TimeSpan.FromMilliseconds(requestHeaderBody.Deadline);
-                Context = null!; // initialized below
+                Context = requestHeaderBody.Context ?? new SortedDictionary<string, string>();
+
+                BinaryContext = istr.ReadBinaryContext();
+
+                if (istr.Pos - startPos != headerSize)
+                {
+                    throw new InvalidDataException(
+                        @$"received invalid request header: expected {headerSize} bytes but read {istr.Pos - startPos
+                        } bytes");
+                }
 
                 if (Location.Any(segment => segment.Length == 0))
                 {
-                    throw new InvalidDataException("received request with empty location segment");
+                    throw new InvalidDataException("received request with an empty location segment");
                 }
             }
 
@@ -209,38 +227,40 @@ namespace ZeroC.Ice
                 throw new InvalidDataException("received request with empty operation name");
             }
 
-            (int size, int sizeLength, Encoding encoding) =
-                Data.Slice(istr.Pos).AsReadOnlySpan().ReadEncapsulationHeader(Protocol.GetEncoding());
+            Payload = data.Slice(istr.Pos);
 
-            Payload = Data.Slice(istr.Pos, size + sizeLength); // the payload is the encapsulation
+            PayloadEncoding = istr.ReadEncapsulationHeader(checkFullBuffer: true).Encoding;
+            if (PayloadEncoding == Encoding.V20)
+            {
+                PayloadCompressionFormat = istr.ReadCompressionFormat();
+            }
+        }
+
+        /// <summary>Constructs an incoming request frame from an outgoing request frame. Used for colocated calls.
+        /// </summary>
+        /// <param name="request">The outgoing request frame.</param>
+        internal IncomingRequestFrame(OutgoingRequestFrame request)
+            : base(request.Protocol, int.MaxValue)
+        {
+            Identity = request.Identity;
+            Facet = request.Facet;
+            Location = request.Location;
+            Operation = request.Operation;
+            IsIdempotent = request.IsIdempotent;
+            Context = new SortedDictionary<string, string>((IDictionary<string, string>)request.Context);
+
+            Priority = default;
+            Deadline = request.Deadline;
 
             if (Protocol == Protocol.Ice2)
             {
-                // BinaryContext is a computed property that depends on Payload.
-                if (BinaryContext.TryGetValue(0, out ReadOnlyMemory<byte> value))
-                {
-                    Context = value.Read(istr => istr.ReadDictionary(minKeySize: 1,
-                                                                     minValueSize: 1,
-                                                                     InputStream.IceReaderIntoString,
-                                                                     InputStream.IceReaderIntoString));
-                }
-                else
-                {
-                    Context = new Dictionary<string, string>();
-                }
+                BinaryContext = request.GetBinaryContext();
             }
 
-            if (protocol == Protocol.Ice1 && size + 4 + istr.Pos != data.Count)
-            {
-                // The payload holds an encapsulation and the encapsulation must use up the full buffer with ice1.
-                // "4" corresponds to fixed-length size with the 1.1 encoding.
-                throw new InvalidDataException($"invalid request encapsulation size: {size}");
-            }
+            PayloadEncoding = request.PayloadEncoding;
 
-            Encoding = encoding;
-            HasCompressedPayload = Encoding == Encoding.V20 && Payload[sizeLength + 2] != 0;
+            Payload = request.Payload.AsArraySegment();
+            PayloadCompressionFormat = request.PayloadCompressionFormat;
         }
-
-        private protected override ArraySegment<byte> GetEncapsulation() => Payload;
     }
 }

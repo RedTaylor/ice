@@ -4,7 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using Test;
+using System.Threading.Tasks;
+using ZeroC.Test;
 
 namespace ZeroC.Ice.Test.Admin
 {
@@ -120,10 +121,10 @@ namespace ZeroC.Ice.Test.Admin
             }
         }
 
-        public static void Run(TestHelper helper)
+        public static async Task RunAsync(TestHelper helper)
         {
-            Communicator? communicator = helper.Communicator;
-            TestHelper.Assert(communicator != null);
+            Communicator communicator = helper.Communicator;
+
             TextWriter output = helper.Output;
             bool ice1 = helper.Protocol == Protocol.Ice1;
 
@@ -138,7 +139,7 @@ namespace ZeroC.Ice.Test.Admin
                     ["Ice.Admin.InstanceName"] = "Test"
                 };
                 using var com = new Communicator(properties);
-                com.ActivateAsync().GetAwaiter().GetResult();
+                await com.ActivateAsync();
                 TestFacets(com, true, false);
             }
             {
@@ -151,13 +152,13 @@ namespace ZeroC.Ice.Test.Admin
                     ["Ice.Admin.Facets"] = "Properties"
                 };
                 using var com = new Communicator(properties);
-                com.ActivateAsync().GetAwaiter().GetResult();
+                await com.ActivateAsync();
                 TestFacets(com, false, true);
             }
             {
                 // Test: Verify that the operations work correctly with the Admin object disabled.
                 using var com = new Communicator();
-                com.ActivateAsync().GetAwaiter().GetResult();
+                await com.ActivateAsync();
                 TestFacets(com, false, false);
             }
             {
@@ -167,12 +168,12 @@ namespace ZeroC.Ice.Test.Admin
                     { "Ice.Admin.Enabled", "1" }
                 };
                 using var com = new Communicator(properties);
-                com.ActivateAsync().GetAwaiter().GetResult();
+                await com.ActivateAsync();
                 TestHelper.Assert(com.GetAdminAsync().GetAwaiter().GetResult() == null);
                 var id = Identity.Parse("test-admin");
                 try
                 {
-                    _ = com.CreateAdminAsync(null, id).GetAwaiter().GetResult();
+                    _ = await com.CreateAdminAsync(null, id);
                     TestHelper.Assert(false);
                 }
                 catch (InvalidConfigurationException)
@@ -196,7 +197,7 @@ namespace ZeroC.Ice.Test.Admin
 
                 using var com = new Communicator(properties);
                 TestFacets(com, true, false);
-                com.ActivateAsync().GetAwaiter().GetResult();
+                await com.ActivateAsync();
                 TestFacets(com, true, false);
             }
             output.WriteLine("ok");
@@ -373,7 +374,7 @@ namespace ZeroC.Ice.Test.Admin
 
                 IRemoteLoggerPrx myProxy = adapter.AddWithUUID(remoteLogger, IRemoteLoggerPrx.Factory);
 
-                adapter.Activate();
+                await adapter.ActivateAsync();
 
                 // No filtering
                 (logMessages, prefix) = logger.GetLog(Array.Empty<LogMessageType>(), Array.Empty<string>(), -1);

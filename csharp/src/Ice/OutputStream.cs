@@ -307,12 +307,12 @@ namespace ZeroC.Ice
         /// <param name="v">The long to write to the stream. It must be in the range [-2^61..2^61 - 1].</param>
         public void WriteVarLong(long v)
         {
-            int encodedSize = GetEncodedSize(v);
+            int encodedSizeExponent = GetVarLongEncodedSizeExponent(v);
             v <<= 2;
-            v |= (uint)encodedSize;
+            v |= (uint)encodedSizeExponent;
             Span<byte> data = stackalloc byte[sizeof(long)];
             MemoryMarshal.Write(data, ref v);
-            WriteByteSpan(data.Slice(0, 1 << encodedSize));
+            WriteByteSpan(data.Slice(0, 1 << encodedSizeExponent));
         }
 
         /// <summary>Writes a uint to stream, using Ice's variable-size integer encoding.</summary>
@@ -324,12 +324,12 @@ namespace ZeroC.Ice
         /// <param name="v">The ulong to write to the stream. It must be in the range [0..2^62 - 1].</param>
         public void WriteVarULong(ulong v)
         {
-            int encodedSize = GetEncodedSize(v);
+            int encodedSizeExponent = GetVarULongEncodedSizeExponent(v);
             v <<= 2;
-            v |= (uint)encodedSize;
+            v |= (uint)encodedSizeExponent;
             Span<byte> data = stackalloc byte[sizeof(ulong)];
             MemoryMarshal.Write(data, ref v);
-            WriteByteSpan(data.Slice(0, 1 << encodedSize));
+            WriteByteSpan(data.Slice(0, 1 << encodedSizeExponent));
         }
 
         // Write methods for constructed types except class and exception
@@ -712,7 +712,7 @@ namespace ZeroC.Ice
         {
             if (v is long value)
             {
-                var format = (EncodingDefinitions.TagFormat)GetEncodedSize(value);
+                var format = (EncodingDefinitions.TagFormat)GetVarLongEncodedSizeExponent(value);
                 WriteTaggedParamHeader(tag, format);
                 WriteVarLong(value);
             }
@@ -730,7 +730,7 @@ namespace ZeroC.Ice
         {
             if (v is ulong value)
             {
-                var format = (EncodingDefinitions.TagFormat)GetEncodedSize(value);
+                var format = (EncodingDefinitions.TagFormat)GetVarULongEncodedSizeExponent(value);
                 WriteTaggedParamHeader(tag, format);
                 WriteVarULong(value);
             }
@@ -1040,22 +1040,15 @@ namespace ZeroC.Ice
             }
         }
 
-        /// <summary>Get the number of bytes required to encode the given value as a varlong</summary>
-        /// <param name="value">The long value to encode</param>
-        /// <return>The number of bytes needed to encode the long value as a varlong</return>
-        internal static int GetVarLongLength(long value) => 1 << GetEncodedSize(value);
-
-        // TODO: Move to ByteBufferExtensions?
-        internal static Position WriteEncapsulationHeader(
-            IList<ArraySegment<byte>> data,
-            Position startAt,
-            Encoding encoding,
-            int size,
-            Encoding payloadEncoding)
+        /// <summary>Computes the minimum number of bytes needed to write a variable-length size with the 2.0 encoding.
+        /// </summary>
+        /// <remarks>The parameter is a long and not a varulong because sizes and size-like values are usually passed
+        /// around as signed integers, even though sizes cannot be negative and are encoded like varulong values.
+        /// </remarks>
+        internal static int GetSizeLength20(long size)
         {
-            var ostr = new OutputStream(encoding, data, startAt);
-            ostr.WriteEncapsulationHeader(size, payloadEncoding);
-            return ostr.Tail;
+            Debug.Assert(size >= 0);
+            return 1 << GetVarULongEncodedSizeExponent((ulong)size);
         }
 
         // Constructor for protocol frame header and other non-encapsulated data.
@@ -1105,24 +1098,9 @@ namespace ZeroC.Ice
             Encoding = payloadEncoding;
         }
 
-        /// <summary>Finishes writing to the stream, in particular completes the current encapsulation (if any).
-        /// </summary>
-        /// <returns>The tail position that marks the end of the stream.</returns>
-        /// TODO: The stream should not longer be used, how can we enforce it.
-        internal Position Finish()
-        {
-            if (_startPos is Position startPos)
-            {
-                Encoding = _mainEncoding;
-                int sizeLength = OldEncoding ? 4 : DefaultSizeLength;
-                RewriteEncapsulationSize(Distance(startPos) - sizeLength, startPos);
-            }
-            return _tail;
-        }
-
         /// <summary>Computes the amount of data written from the start position to the current position and writes that
-        /// size at the start position (as a fixed-length 4-bytes size). The size does not include its own encoded
-        /// length.</summary>
+        /// size at the start position (as a fixed-length size). The size does not include its own encoded length.
+        /// </summary>
         /// <param name="start">The start position.</param>
         /// <param name="sizeLength">The number of bytes used to marshal the size 1, 2 or 4.</param>
         internal void EndFixedLengthSize(Position start, int sizeLength = DefaultSizeLength)
@@ -1136,6 +1114,22 @@ namespace ZeroC.Ice
             {
                 RewriteFixedLengthSize20(Distance(start) - sizeLength, start, sizeLength);
             }
+        }
+
+        /// <summary>Completes the current encapsulation (if any) and finishes off the underlying buffer. You should not
+        /// write additional data to this output stream or its underlying buffer after calling Finish, however rewriting
+        /// previous data (with for example <see cref="EndFixedLengthSize"/>) is fine.</summary>
+        internal void Finish()
+        {
+            if (_startPos is Position startPos)
+            {
+                Encoding = _mainEncoding;
+                int sizeLength = OldEncoding ? 4 : DefaultSizeLength;
+                RewriteEncapsulationSize(Distance(startPos) - sizeLength, startPos);
+            }
+
+            Debug.Assert(_segmentList.Count - 1 == _tail.Segment);
+            _segmentList[^1] = _segmentList[^1].Slice(0, _tail.Offset);
         }
 
         /// <summary>Writes a size on a fixed number of bytes at the given position of the stream.</summary>
@@ -1208,7 +1202,7 @@ namespace ZeroC.Ice
             WriteEncapsulationHeader(size: encoding == Encoding.V20 ? 3 : 2, encoding);
             if (encoding == Encoding.V20)
             {
-                WriteByte(0); // The compression status, 0 not-compressed
+                WriteByte(0); // The compression status, 0 = not-compressed
             }
             return _tail;
         }
@@ -1297,11 +1291,11 @@ namespace ZeroC.Ice
             }
         }
 
-        /// <summary>Gets the number of bytes needed to encode a long value.</summary>
+        /// <summary>Gets the minimum number of bytes needed to encode a long value with the varlong encoding as an
+        /// exponent of 2.</summary>
         /// <param name="value">The value to encode.</param>
-        /// <returns>N where 2^N is the number of bytes needed to encode value with Ice's var-size integer encoding.
-        /// </returns>
-        private static int GetEncodedSize(long value)
+        /// <returns>N where 2^N is the number of bytes needed to encode value with Ice's varlong encoding.</returns>
+        private static int GetVarLongEncodedSizeExponent(long value)
         {
             if (value < EncodingDefinitions.VarLongMinValue || value > EncodingDefinitions.VarLongMaxValue)
             {
@@ -1317,11 +1311,11 @@ namespace ZeroC.Ice
             };
         }
 
-        /// <summary>Gets the number of bytes needed to encode a long value.</summary>
+        /// <summary>Gets the mimimum number of bytes needed to encode a long value with the varulong encoding as an
+        /// exponent of 2.</summary>
         /// <param name="value">The value to encode.</param>
-        /// <returns>N where 2^N is the number of bytes needed to encode value with Ice's var-size integer encoding.
-        /// </returns>
-        private static int GetEncodedSize(ulong value)
+        /// <returns>N where 2^N is the number of bytes needed to encode value with varulong encoding.</returns>
+        private static int GetVarULongEncodedSizeExponent(ulong value)
         {
             if (value > EncodingDefinitions.VarULongMaxValue)
             {
@@ -1386,17 +1380,7 @@ namespace ZeroC.Ice
         /// encoding.</summary>
         /// <param name="size">The size.</param>
         /// <returns>The minimum number of bytes.</returns>
-        private int GetSizeLength(int size)
-        {
-            if (OldEncoding)
-            {
-                return size < 255 ? 1 : 5;
-            }
-            else
-            {
-                return 1 << GetEncodedSize((ulong)size);
-            }
-        }
+        private int GetSizeLength(int size) => OldEncoding ? (size < 255 ? 1 : 5) : GetSizeLength20(size);
 
         /// <summary>Writes a byte at a given position of the stream.</summary>
         /// <param name="v">The byte value to write.</param>
@@ -1440,7 +1424,7 @@ namespace ZeroC.Ice
         /// <summary>Writes a size on 4 bytes at the given position of the stream.</summary>
         /// <param name="size">The size to write.</param>
         /// <param name="pos">The position to write to.</param>
-        private void RewriteFixedLengthSize11(int size, Position pos)
+        internal void RewriteFixedLengthSize11(int size, Position pos)
         {
             Debug.Assert(pos.Segment < _segmentList.Count);
 
@@ -1469,7 +1453,7 @@ namespace ZeroC.Ice
         /// <param name="size">The size of the encapsulation, in bytes. This size does not include the length of the
         /// encoded size itself.</param>
         /// <param name="encoding">The encoding of the new encapsulation.</param>
-        private void WriteEncapsulationHeader(int size, Encoding encoding)
+        internal void WriteEncapsulationHeader(int size, Encoding encoding)
         {
             if (OldEncoding)
             {
